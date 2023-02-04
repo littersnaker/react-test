@@ -1,10 +1,11 @@
 import { defineConfig, loadEnv, ConfigEnv, UserConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { resolve } from "path";
+import { chunkSplitPlugin } from "vite-plugin-chunk-split";
 import { wrapperEnv } from "./src/utils/getEnv";
-import { visualizer } from "rollup-plugin-visualizer";
+// import { visualizer } from "rollup-plugin-visualizer";
 import { createHtmlPlugin } from "vite-plugin-html";
-import viteCompression from "vite-plugin-compression";
+import compressPlugin from "vite-plugin-compression";
 import eslintPlugin from "vite-plugin-eslint";
 import { createSvgIconsPlugin } from "vite-plugin-svg-icons";
 
@@ -59,6 +60,7 @@ export default defineConfig((mode: ConfigEnv): UserConfig => {
 					}
 				}
 			}),
+
 			// * 使用 svg 图标
 			createSvgIconsPlugin({
 				iconDirs: [resolve(process.cwd(), "src/assets/icons")],
@@ -66,17 +68,24 @@ export default defineConfig((mode: ConfigEnv): UserConfig => {
 			}),
 			// * EsLint 报错信息显示在浏览器界面上
 			eslintPlugin(),
+			chunkSplitPlugin({
+				// 指定拆包策略
+				strategy: "default",
+				customSplitting: {
+					// 1. 支持填包名。`react` 和 `react-dom` 会被打包到一个名为`render-vendor`的 chunk 里面(包括它们的依赖，如 object-assign)
+					"react-vendor": ["react", "react-dom", "react-redux"],
+					moment: ["moment"],
+					axios: ["axios"],
+					"antd-ui": ["antd", "@ant-design/icons"]
+				}
+			}),
 			// * 是否生成包预览
-			viteEnv.VITE_REPORT && visualizer(),
+			// viteEnv.VITE_REPORT && visualizer(),
 			// * gzip compress
-			viteEnv.VITE_BUILD_GZIP &&
-				viteCompression({
-					verbose: true,
-					disable: false,
-					threshold: 10240,
-					algorithm: "gzip",
-					ext: ".gz"
-				})
+			compressPlugin({
+				threshold: 102050,
+				ext: ".gz"
+			})
 		],
 		esbuild: {
 			pure: viteEnv.VITE_DROP_CONSOLE ? ["console.log", "debugger"] : []
